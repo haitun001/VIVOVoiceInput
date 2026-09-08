@@ -1,0 +1,102 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: VIVOVoiceInput 0.1\n"
+"Report-Msgid-Bugs-To: nvda-translations@groups.io\n"
+"POT-Creation-Date: 2026-06-27 00:00+0800\n"
+"PO-Revision-Date: 2026-09-08 00:00+0800\n"
+"Last-Translator: haitun <haitun940624zx@gmail.com>\n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "VIVO Voice Input"
+msgstr "VIVO语音输入"
+
+msgid "Uses VIVO's speech recognition capability for voice input.\nDeveloped with assistance from Codex."
+msgstr "调用VIVO的语音识别能力做语音输入。\n由Codex协助开发。"
+
+msgid "First public release."
+msgstr "首次公开发布。"
+
+msgid "NVDACN &username:"
+msgstr "NVDA中文站用户名(&U):"
+
+msgid "NVDACN &password:"
+msgstr "NVDA中文站密码(&P):"
+
+msgid "Log in"
+msgstr "登录"
+
+msgid "Log out"
+msgstr "退出登录"
+
+msgid "Input device"
+msgstr "输入设备"
+
+msgid "System default input device"
+msgstr "系统默认输入设备"
+
+msgid "VIVO Voice Input: The selected input device is unavailable. Switched to the system default recording device."
+msgstr "VIVO语音输入所选输入设备不可用，已经回退到系统默认录音设备。"
+
+msgid "VIVO Voice Input detected that the system default input device is unavailable. Please check the system input device settings."
+msgstr "VIVO语音输入检测到系统默认输入设备不可用，请检查系统输入设备设置。"
+
+msgid "VIVO Voice Input could not correctly detect the system input configuration. Switched to the default input device."
+msgstr "VIVO语音输入无法正确检测系统输入配置，已经采用默认输入设备。"
+
+msgid "Please enter your NVDACN username and password before logging in."
+msgstr "请输入NVDA中文站用户名和密码后再登录。"
+
+msgid "Login was unsuccessful. Please check your NVDACN username and password and try again."
+msgstr "登录未成功。请检查NVDA中文站用户名和密码后重试。"
+
+msgid "Could not connect to the NVDACN authentication server. Please check your network connection or try again later."
+msgstr "无法连接NVDA中文站认证服务器。请检查网络连接，或稍后重试。"
+
+msgid "The NVDACN authentication server returned an invalid response, so login cannot be completed. Please try again later."
+msgstr "NVDA中文站认证服务器返回的信息异常，暂时无法完成登录。请稍后重试。"
+
+msgid "Could not encrypt the password. These login details have not been saved. Please try logging in again."
+msgstr "无法加密密码，本次登录信息未保存。请重试登录。"
+
+msgid "Authentication succeeded, but an error occurred while saving your login details. Please try logging in again."
+msgstr "认证已通过，但登录信息保存时出错。请重试登录。"
+
+msgid "Logout is incomplete. An error occurred while saving the NVDA configuration. Please click Log out again to retry."
+msgstr "退出登录未完成。保存NVDA配置时出错，请再次点击“退出登录”重试。"
+
+msgid "Could not read the saved password. Please enter your password again and click Log in."
+msgstr "无法读取已保存的密码。请重新输入密码并点击登录。"
+
+msgid "Could not connect to the authentication server."
+msgstr "无法连接到认证服务器。"
+
+msgid "Invalid response from the authentication server."
+msgstr "认证服务器返回了无效响应。"
+
+msgid "Hold for speech recognition; release to stop recognition"
+msgstr "按住语音识别，松开结束识别"
+
+msgid "Please log in in the VIVO Voice Input settings first."
+msgstr "请先在VIVO语音输入设置中登录。"
+
+msgid "The previous voice input is still being processed."
+msgstr "正在处理上一次语音输入。"
+
+msgid "Recording failed. Please check the input device and try again."
+msgstr "录音失败，请检查输入设备后重试。"
+
+msgid "Speech recognition failed. Please check the network or log in again and retry."
+msgstr "语音识别失败，请检查网络或重新登录后重试。"
+
+msgid "No text was recognized."
+msgstr "未识别到文字。"
+
+msgid "The focus has changed. This voice input has been cancelled."
+msgstr "焦点已改变，已取消本次语音输入。"
+
+msgid "Voice input failed."
+msgstr "语音输入失败。"
