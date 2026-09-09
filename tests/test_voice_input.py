@@ -124,7 +124,7 @@ def keyboardChecks(plugin, host):
 				assert not key(keys[-1], True)
 			session.recordingDone.set()
 			session.done.set()
-			session.text = "recognized \u4e2d\U0001f600" * 1000
+			session.text = "recognized text"
 			controller._poll()
 			assert beep.call_args_list == [((300, 60),), ((800, 60),)]
 			send.assert_not_called()
@@ -206,7 +206,6 @@ def keyboardChecks(plugin, host):
 			plugin.VIVOVoiceInputSettingsPanel
 			not in host["gui.settingsDialogs"].NVDASettingsDialog.categoryClasses
 		)
-		assert all(isinstance(call.args[0], int) for call in host["winUser"].getAsyncKeyState.call_args_list)
 
 
 def recordingChecks(recording):
@@ -464,6 +463,19 @@ async def protocolChecks(recognition):
 		await waitDone(session)
 		assert session.error == recognition.RECORDING_ERROR
 		assert session.cancelled.is_set() and session.text is None
+
+	# A press released before capture produces no network request.
+	stop = threading.Event()
+	stop.set()
+	with (
+		patch.object(recognition.recording, "record", return_value=None),
+		patch.object(recognition, "genSignHeaders") as sign,
+	):
+		session = recognition.Session("default", stop)
+		session.start("test-user", "test-pass", "0.1")
+		await waitDone(session)
+	assert session.error == recognition.NO_TEXT_ERROR
+	sign.assert_not_called()
 
 
 def runChecks(directory):

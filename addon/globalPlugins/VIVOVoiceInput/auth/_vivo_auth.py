@@ -61,8 +61,6 @@ def _fetchSignatureFromService(nvdacnUser: str, nvdacnPass: str, signingStringBy
 	apiParams = {"user": nvdacnUser, "pass": nvdacnPass, "name": "vivo", "action": "signature"}
 	url = f"{NVDACN_API_URL}?{urllib.parse.urlencode(apiParams)}"
 
-	log.debug("Requesting Vivo signature from NVDACN API.")
-
 	try:
 		response = network.sendRequest(
 			method="POST",
@@ -73,7 +71,6 @@ def _fetchSignatureFromService(nvdacnUser: str, nvdacnPass: str, signingStringBy
 		result = response.json()
 
 		if result.get("code") == 200 and "data" in result:
-			log.info("Successfully fetched Vivo signature from NVDACN API.")
 			return result["data"]
 		else:
 			errorMessage = result.get("data", "Unknown API error")
