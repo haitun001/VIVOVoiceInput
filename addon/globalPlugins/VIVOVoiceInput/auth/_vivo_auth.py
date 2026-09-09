@@ -61,7 +61,7 @@ def _fetchSignatureFromService(nvdacnUser: str, nvdacnPass: str, signingStringBy
 	apiParams = {"user": nvdacnUser, "pass": nvdacnPass, "name": "vivo", "action": "signature"}
 	url = f"{NVDACN_API_URL}?{urllib.parse.urlencode(apiParams)}"
 
-	log.debug("Requesting Vivo signature from NVDACN API for user: %s", nvdacnUser)
+	log.debug("Requesting Vivo signature from NVDACN API.")
 
 	try:
 		response = network.sendRequest(
@@ -73,7 +73,7 @@ def _fetchSignatureFromService(nvdacnUser: str, nvdacnPass: str, signingStringBy
 		result = response.json()
 
 		if result.get("code") == 200 and "data" in result:
-			log.info("Successfully fetched Vivo signature for user %s.", nvdacnUser)
+			log.info("Successfully fetched Vivo signature from NVDACN API.")
 			return result["data"]
 		else:
 			errorMessage = result.get("data", "Unknown API error")
@@ -83,14 +83,13 @@ def _fetchSignatureFromService(nvdacnUser: str, nvdacnPass: str, signingStringBy
 		raise
 	except (NetworkError, ApiError) as e:
 		log.error(
-			"A network error or API error occurred while fetching Vivo signature for user: %s.",
-			nvdacnUser,
+			"A network error or API error occurred while fetching Vivo signature.",
 			exc_info=True,
 		)
 		# Translators: An error message indicating failure to connect to the authentication server.
 		raise AuthenticationError(_("Could not connect to the authentication server.")) from e
 	except (json.JSONDecodeError, KeyError, TypeError) as e:
-		log.error("Invalid response from NVDACN API: %s", response.text, exc_info=True)
+		log.error("Invalid response from NVDACN API.", exc_info=True)
 		# Translators: An error message for an invalid response from the authentication server.
 		raise ApiError(_("Invalid response from the authentication server.")) from e
 

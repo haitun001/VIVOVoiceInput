@@ -199,18 +199,19 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 			return
 		self._busy = True
 		self.loginButton.Disable()
+		succeeded = False
 		try:
 			if self._loggedIn:
-				self._logout()
+				succeeded = self._logout()
 			else:
-				self._login()
+				succeeded = self._login()
 		finally:
 			self._busy = False
 			if self:
 				self.loginButton.Enable()
-				(self.loginButton if self._loggedIn else self.usernameEdit).SetFocus()
+				(self.loginButton if succeeded and self._loggedIn else self.usernameEdit).SetFocus()
 
-	def _login(self) -> None:
+	def _login(self) -> bool:
 		from .auth._vivo_auth import genSignHeaders
 
 		username = self.usernameEdit.GetValue()
@@ -220,7 +221,7 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 				# Translators: Both NVDACN credential fields are required before logging in.
 				_("Please enter your NVDACN username and password before logging in."),
 			)
-			return
+			return False
 
 		try:
 			# ExecAndPump processes window messages, so prevent reentrant settings actions while it runs.
@@ -242,7 +243,7 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 					"Login was unsuccessful. Please check your NVDACN username and password and try again.",
 				)
 			self._showError(message)
-			return
+			return False
 		except Exception as error:
 			log.error("Invalid NVDACN authentication response (%s).", type(error).__name__)
 			self._showError(
@@ -252,10 +253,10 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 					"Please try again later.",
 				),
 			)
-			return
+			return False
 
 		if not self:
-			return
+			return False
 		try:
 			encryptedPassword = credentials.encryptPassword(password)
 		except Exception:
@@ -267,7 +268,7 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 					"Please try logging in again.",
 				),
 			)
-			return
+			return False
 		try:
 			_saveCredentials(username, encryptedPassword, True)
 		except Exception:
@@ -279,11 +280,12 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 					"Please try logging in again.",
 				),
 			)
-			return
+			return False
 		if self:
 			self._setLoginState(True)
+		return True
 
-	def _logout(self) -> None:
+	def _logout(self) -> bool:
 		try:
 			_saveCredentials("", "", False)
 		except Exception:
@@ -295,11 +297,12 @@ class VIVOVoiceInputSettingsPanel(SettingsPanel):
 					"Please click Log out again to retry.",
 				),
 			)
-			return
+			return False
 		if self:
 			self.usernameEdit.Clear()
 			self.passwordEdit.Clear()
 			self._setLoginState(False)
+		return True
 
 	def onSave(self) -> None:
 		# Login and logout persist immediately; unverified edits must not overwrite saved credentials.

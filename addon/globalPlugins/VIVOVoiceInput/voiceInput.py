@@ -88,11 +88,17 @@ class VoiceInput:
 			# Translators: Voice input requires a successful login in the add-on settings.
 			ui.delayedMessage(_("Please log in in the VIVO Voice Input settings first."))
 			return
+		username = section[NVDACN_USERNAME_KEY]
 		try:
-			username = section[NVDACN_USERNAME_KEY]
 			password = credentials.decryptPassword(section[NVDACN_PASSWORD_KEY])
-			if not username or not password:
-				raise ValueError("Missing saved credentials")
+		except Exception as error:
+			log.error("Unable to read saved VIVO credentials (%s).", type(error).__name__)
+			ui.delayedMessage(_("Please log in in the VIVO Voice Input settings first."))
+			return
+		if not username or not password:
+			ui.delayedMessage(_("Please log in in the VIVO Voice Input settings first."))
+			return
+		try:
 			version = addonHandler.getCodeAddon().manifest["version"]
 			self._focus = api.getFocusObject()
 			self._keys = press.keys
