@@ -43,7 +43,9 @@ class VoiceInput:
 			with self._lock:
 				key = (gesture.vkCode, gesture.isExtended)
 				press = _Press(key, set(gesture.modifiers) | {key})
-				if not press.keys.issubset(self._down):
+				# NVDA adds NumLock to some numpad gestures without a physical key-down event.
+				missing = press.keys - self._down
+				if missing and missing != {(winUser.VK_NUMLOCK, False)}:
 					press.stop.set()
 				self._press = press
 				# Reserve this physical press before NVDA queues the script on the main thread.
@@ -88,11 +90,17 @@ class VoiceInput:
 			# Translators: Voice input requires a successful login in the add-on settings.
 			ui.delayedMessage(_("Please log in in the VIVO Voice Input settings first."))
 			return
+		username = section[NVDACN_USERNAME_KEY]
 		try:
-			username = section[NVDACN_USERNAME_KEY]
 			password = credentials.decryptPassword(section[NVDACN_PASSWORD_KEY])
-			if not username or not password:
-				raise ValueError("Missing saved credentials")
+		except Exception as error:
+			log.error("Unable to read saved VIVO credentials (%s).", type(error).__name__)
+			ui.delayedMessage(_("Please log in in the VIVO Voice Input settings first."))
+			return
+		if not username or not password:
+			ui.delayedMessage(_("Please log in in the VIVO Voice Input settings first."))
+			return
+		try:
 			version = addonHandler.getCodeAddon().manifest["version"]
 			self._focus = api.getFocusObject()
 			self._keys = press.keys

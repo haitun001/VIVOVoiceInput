@@ -8,14 +8,14 @@ import logging
 import queue
 import threading
 import time
-from urllib.parse import quote, urlencode
 import uuid
 
 import comtypes
 from logHandler import log
 
 from . import _, recording
-from .auth._vivo_auth import genSignHeaders
+from .auth._vivo_auth import _genCanonicalQueryString, genSignHeaders
+from .exceptions import ApiError, AuthenticationError, NetworkError
 from ._vendor.websockets.asyncio.client import connect
 from ._vendor.websockets.exceptions import ConnectionClosedOK
 
@@ -28,7 +28,21 @@ _protocolLog.propagate = False
 # Translators: Recording could not start or failed while reading the selected input device.
 RECORDING_ERROR = _("Recording failed. Please check the input device and try again.")
 # Translators: Authentication, connection, or speech recognition failed.
-RECOGNITION_ERROR = _("Speech recognition failed. Please check the network or log in again and retry.")
+RECOGNITION_ERROR = _("Speech recognition failed. Please try again.")
+# Translators: The speech service did not return recognized text.
+NO_TEXT_ERROR = _("No text was recognized.")
+# Translators: The saved VIVO credentials were rejected by NVDACN.
+AUTHENTICATION_ERROR = _("Please log in in the VIVO Voice Input settings first.")
+# Translators: The authentication service could not be reached.
+AUTHENTICATION_NETWORK_ERROR = _("Could not connect to the authentication server.")
+# Translators: The authentication service returned an invalid response.
+AUTHENTICATION_RESPONSE_ERROR = _("Invalid response from the authentication server.")
+
+
+class RecognitionServiceError(ValueError):
+	def __init__(self, code):
+		super().__init__(f"VIVO recognition service error ({code})")
+		self.code = code
 
 
 class Session:
@@ -43,6 +57,8 @@ class Session:
 		self.error = None
 		self.text = None
 		self._finalReceived = False
+		self._audioBytes = 0
+		self.recordingStarted = threading.Event()
 
 	def start(self, username, password, version):
 		self.recorder = threading.Thread(target=self._record, name="VIVOVoiceInput recording", daemon=True)
@@ -63,7 +79,7 @@ class Session:
 		try:
 			comtypes.CoInitializeEx(comtypes.COINIT_MULTITHREADED)
 			initialized = True
-			recording.record(self.deviceId, self.stop, self._started, self.audio.put)
+			recording.record(self.deviceId, self.stop, self._started, self._onAudio)
 		except Exception as error:
 			log.error("VIVO recording failed (%s).", type(error).__name__)
 			self.error = RECORDING_ERROR
@@ -77,12 +93,23 @@ class Session:
 
 	def _started(self):
 		self.started = True
+		self.recordingStarted.set()
+
+	def _onAudio(self, data):
+		self._audioBytes += len(data)
+		self.audio.put(data)
 
 	def _run(self, username, password, version):
 		try:
 			if self.cancelled.is_set():
 				return
 			self.recorder.start()
+			if not self._waitForRecordingStart():
+				if not self.cancelled.is_set() and not self.error:
+					self.error = NO_TEXT_ERROR
+				return
+			if self._skipShortRecording():
+				return
 			params = {
 				"client_version": version,
 				"package": "VIVOVoiceInput",
@@ -96,11 +123,32 @@ class Session:
 			headers = genSignHeaders(username, password, "GET", "/asr/v2", params)
 			signature = headers.get("X-AI-GATEWAY-SIGNATURE")
 			if not isinstance(signature, str) or not signature.strip():
-				raise ValueError("Invalid authentication signature")
+				raise ApiError("Invalid authentication signature")
 			password = username = None
-			if not self.cancelled.is_set():
-				url = ENDPOINT + "?" + urlencode(sorted(params.items()), quote_via=quote, safe="/")
+			if not self._skipShortRecording():
+				url = ENDPOINT + "?" + _genCanonicalQueryString(params)
 				self.text = asyncio.run(self._recognize(url, headers))
+		except AuthenticationError as error:
+			if not self.cancelled.is_set():
+				if isinstance(error.__cause__, NetworkError):
+					self.error = AUTHENTICATION_NETWORK_ERROR
+				elif isinstance(error.__cause__, ApiError):
+					self.error = AUTHENTICATION_RESPONSE_ERROR
+				else:
+					self.error = AUTHENTICATION_ERROR
+			log.error("VIVO recognition authentication failed (%s).", type(error).__name__)
+		except NetworkError as error:
+			if not self.cancelled.is_set():
+				self.error = AUTHENTICATION_NETWORK_ERROR
+			log.error("VIVO recognition authentication service failed (%s).", type(error).__name__)
+		except ApiError as error:
+			if not self.cancelled.is_set():
+				self.error = AUTHENTICATION_RESPONSE_ERROR
+			log.error("VIVO recognition authentication response failed (%s).", type(error).__name__)
+		except RecognitionServiceError as error:
+			if not self.cancelled.is_set():
+				self.error = RECOGNITION_ERROR
+			log.error("VIVO recognition service failed (code=%s).", error.code)
 		except Exception as error:
 			log.error("VIVO recognition failed (%s).", type(error).__name__)
 			if not self.cancelled.is_set():
@@ -112,6 +160,25 @@ class Session:
 			while not self.audio.empty():
 				self.audio.get_nowait()
 			self.done.set()
+
+	def _waitForRecordingStart(self):
+		while not self.recordingStarted.wait(0.01):
+			if self.cancelled.is_set() or self.recordingDone.is_set():
+				return False
+		return True
+
+	def _skipShortRecording(self):
+		if self.cancelled.is_set() or self.error:
+			return True
+		if not self.stop.is_set():
+			return False
+		self.recordingDone.wait()
+		if self.cancelled.is_set() or self.error:
+			return True
+		if self._audioBytes < recording.FRAME_BYTES:
+			self.error = NO_TEXT_ERROR
+			return True
+		return False
 
 	async def _recognize(self, url, headers):
 		# Cancellation also covers an in-progress handshake, without another worker thread.
@@ -202,9 +269,14 @@ class Session:
 		lastResultId = -1
 		while True:
 			message = json.loads(await socket.recv())
-			if not isinstance(message, dict) or type(message.get("code")) is not int or message["code"] != 0:
+			if not isinstance(message, dict):
 				raise ValueError("Invalid or unsuccessful recognition response")
 			action = message.get("action")
+			code = message.get("code")
+			if type(code) is not int:
+				raise ValueError("Invalid or unsuccessful recognition response")
+			if code != 0:
+				raise RecognitionServiceError(code)
 			if action in ("started", "vad"):
 				continue
 			if action != "result":

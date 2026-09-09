@@ -89,8 +89,8 @@ msgstr "正在处理上一次语音输入。"
 msgid "Recording failed. Please check the input device and try again."
 msgstr "录音失败，请检查输入设备后重试。"
 
-msgid "Speech recognition failed. Please check the network or log in again and retry."
-msgstr "语音识别失败，请检查网络或重新登录后重试。"
+msgid "Speech recognition failed. Please try again."
+msgstr "语音识别失败，请重试。"
 
 msgid "No text was recognized."
 msgstr "未识别到文字。"
