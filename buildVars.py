@@ -20,9 +20,7 @@ addon_info = AddonInfo(
 	addon_summary=_("VIVO Voice Input"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-on store
-	addon_description=_(
-		"Uses VIVO's speech recognition capability for voice input.\nDeveloped with assistance from Codex.",
-	),
+	addon_description=_("Uses VIVO's speech recognition capability for voice input."),
 	# version
 	addon_version="0.2",
 	# Translators: Release notes for version 0.2, including the contributor credit.

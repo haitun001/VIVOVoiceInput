@@ -14,8 +14,8 @@ msgstr ""
 msgid "VIVO Voice Input"
 msgstr "VIVO语音输入"
 
-msgid "Uses VIVO's speech recognition capability for voice input.\nDeveloped with assistance from Codex."
-msgstr "调用VIVO的语音识别能力做语音输入。\n由Codex协助开发。"
+msgid "Uses VIVO's speech recognition capability for voice input."
+msgstr "调用VIVO的语音识别能力做语音输入。"
 
 msgid "Improved spoken messages for account information errors, numpad shortcut support, and short recording handling. Removed usernames and raw responses from authentication logs. Thanks to cary-rowen for contributing through PR #2."
 msgstr "改善账户信息异常时的语音提示、数字小键盘快捷键和短录音处理，移除认证日志中的用户名和原始响应内容。感谢 cary-rowen 通过 PR #2 作出的贡献。"
