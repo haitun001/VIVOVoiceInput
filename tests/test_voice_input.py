@@ -128,7 +128,7 @@ def keyboardChecks(plugin, host):
 			press()
 			session = controller._session
 			assert session.deviceId == "default"
-			assert start.call_args.args == ("test-user", "test-pass", "0.1")
+			assert start.call_args.args == ("test-user", "test-pass", "0.2")
 			session.started = True
 			controller._poll()
 			assert beep.call_args.args == (300, 60)
@@ -402,7 +402,7 @@ async def protocolChecks(recognition):
 				patch.object(recognition.recording, "record", side_effect=record),
 				patch.object(recognition, "genSignHeaders", side_effect=sign),
 			):
-				session.start("test-user &+", "test-pass", "0.1")
+				session.start("test-user &+", "test-pass", "0.2")
 				if not early:
 					asyncio.get_running_loop().call_later(0.05, stop.set)
 				await waitDone(session)
@@ -494,7 +494,7 @@ async def protocolChecks(recognition):
 		patch.object(recognition, "genSignHeaders", return_value={"X-AI-GATEWAY-SIGNATURE": "test"}),
 	):
 		session = recognition.Session("missing", threading.Event())
-		session.start("test-user", "test-pass", "0.1")
+		session.start("test-user", "test-pass", "0.2")
 		await waitDone(session)
 		assert session.error == recognition.RECORDING_ERROR
 		assert session.cancelled.is_set() and session.text is None
@@ -507,7 +507,7 @@ async def protocolChecks(recognition):
 		patch.object(recognition, "genSignHeaders") as sign,
 	):
 		session = recognition.Session("default", stop)
-		session.start("test-user", "test-pass", "0.1")
+		session.start("test-user", "test-pass", "0.2")
 		await waitDone(session)
 	assert session.error == recognition.NO_TEXT_ERROR
 	sign.assert_not_called()
@@ -550,7 +550,7 @@ async def protocolChecks(recognition):
 			patch.object(recognition, "genSignHeaders", side_effect=failure),
 		):
 			session = recognition.Session("default", threading.Event())
-			session.start("test-user", "test-pass", "0.1")
+			session.start("test-user", "test-pass", "0.2")
 			await waitDone(session)
 		assert session.error == expected
 
@@ -568,7 +568,7 @@ async def protocolChecks(recognition):
 				patch.object(recognition, "genSignHeaders", return_value={"X-AI-GATEWAY-SIGNATURE": "test"}),
 			):
 				session = recognition.Session("default", threading.Event())
-				session.start("test-user", "test-pass", "0.1")
+				session.start("test-user", "test-pass", "0.2")
 				await waitDone(session)
 		assert session.error == recognition.RECOGNITION_ERROR
 
@@ -585,7 +585,7 @@ async def protocolChecks(recognition):
 		patch.object(session, "_waitForRecordingStart", side_effect=cancelAfterStart),
 		patch.object(recognition, "genSignHeaders") as sign,
 	):
-		session.start("test-user", "test-pass", "0.1")
+		session.start("test-user", "test-pass", "0.2")
 		await waitDone(session)
 	assert session.error is None
 	sign.assert_not_called()
@@ -595,7 +595,7 @@ def runChecks(directory):
 	host = {
 		"addonHandler": SimpleNamespace(
 			initTranslation=initTranslation,
-			getCodeAddon=lambda: SimpleNamespace(manifest={"version": "0.1"}),
+			getCodeAddon=lambda: SimpleNamespace(manifest={"version": "0.2"}),
 		),
 		"config": SimpleNamespace(conf=ConfigManager(directory / "nvda.ini")),
 		"globalPluginHandler": SimpleNamespace(GlobalPlugin=GlobalPlugin),

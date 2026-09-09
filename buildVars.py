@@ -24,9 +24,13 @@ addon_info = AddonInfo(
 		"Uses VIVO's speech recognition capability for voice input.\nDeveloped with assistance from Codex.",
 	),
 	# version
-	addon_version="0.1",
-	# Translators: Release notes for the first public version of the add-on.
-	addon_changelog=_("First public release."),
+	addon_version="0.2",
+	# Translators: Release notes for version 0.2, including the contributor credit.
+	addon_changelog=_(
+		"Improved spoken messages for account information errors, numpad shortcut support, "
+		"and short recording handling. Removed usernames and raw responses from authentication logs. "
+		"Thanks to cary-rowen for contributing through PR #2.",
+	),
 	# Author(s)
 	addon_author="haitun <haitun940624zx@gmail.com>",
 	# URL for the add-on documentation support

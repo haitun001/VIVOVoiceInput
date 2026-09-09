@@ -6,11 +6,11 @@ VIVO语音输入。默认快捷键是 **NVDA+Shift+V**，按住说话，松开�
 
 您需要一个能正常录音的麦克风和良好的网络环境。您还需要具备一个有效的NVDA中文站账号。[点此访问NVDA中文站](https://www.nvdacn.com/)。
 
-插件版本：0.1。NVDA版本：2026.1至2026.3。
+插件版本：0.2。NVDA版本：2026.1至2026.3。
 
 ## 安装与登录
 
-1. 打开 `VIVOVoiceInput-0.1.nvda-addon`，按NVDA提示安装并重启。
+1. 打开 `VIVOVoiceInput-0.2.nvda-addon`，按NVDA提示安装并重启。
 2. 打开NVDA菜单 → 选项 → 设置 → VIVO语音输入。
 3. 输入您的NVDA中文站用户名和密码，点击“登录”。
 
