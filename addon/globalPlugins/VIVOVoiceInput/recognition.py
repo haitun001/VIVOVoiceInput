@@ -8,14 +8,13 @@ import logging
 import queue
 import threading
 import time
-from urllib.parse import quote, urlencode
 import uuid
 
 import comtypes
 from logHandler import log
 
 from . import _, recording
-from .auth._vivo_auth import genSignHeaders
+from .auth._vivo_auth import _genCanonicalQueryString, genSignHeaders
 from ._vendor.websockets.asyncio.client import connect
 from ._vendor.websockets.exceptions import ConnectionClosedOK
 
@@ -99,7 +98,7 @@ class Session:
 				raise ValueError("Invalid authentication signature")
 			password = username = None
 			if not self.cancelled.is_set():
-				url = ENDPOINT + "?" + urlencode(sorted(params.items()), quote_via=quote, safe="/")
+				url = ENDPOINT + "?" + _genCanonicalQueryString(params)
 				self.text = asyncio.run(self._recognize(url, headers))
 		except Exception as error:
 			log.error("VIVO recognition failed (%s).", type(error).__name__)

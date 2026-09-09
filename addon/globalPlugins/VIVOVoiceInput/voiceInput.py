@@ -43,7 +43,9 @@ class VoiceInput:
 			with self._lock:
 				key = (gesture.vkCode, gesture.isExtended)
 				press = _Press(key, set(gesture.modifiers) | {key})
-				if not press.keys.issubset(self._down):
+				# NVDA adds NumLock to some numpad gestures without a physical key-down event.
+				missing = press.keys - self._down
+				if missing and missing != {(winUser.VK_NUMLOCK, False)}:
 					press.stop.set()
 				self._press = press
 				# Reserve this physical press before NVDA queues the script on the main thread.
@@ -116,7 +118,7 @@ class VoiceInput:
 		self._poll()
 
 	def focusChanged(self, obj):
-		if self._session and obj != self._focus and not self._cancelNotified:
+		if self._session and obj is not self._focus and not self._cancelNotified:
 			self._cancelNotified = True
 			self._session.cancel()
 			# Translators: The result will not be inserted because focus moved during this session.
