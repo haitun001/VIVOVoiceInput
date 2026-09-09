@@ -326,6 +326,8 @@ def runChecks(directory, frame):
 				spoken, dialog = notifications[index : index + 2]
 				assert spoken == ("speech", dialog[1])
 				assert dialog[0] == "dialog" and dialog[2] is False
+			logged = repr(hostModules["logHandler"].log.mock_calls)
+			assert username not in logged and password not in logged and "{invalid json" not in logged
 
 
 if __name__ == "__main__":

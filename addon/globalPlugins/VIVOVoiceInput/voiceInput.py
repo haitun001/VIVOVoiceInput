@@ -118,7 +118,7 @@ class VoiceInput:
 		self._poll()
 
 	def focusChanged(self, obj):
-		if self._session and obj is not self._focus and not self._cancelNotified:
+		if self._session and obj != self._focus and not self._cancelNotified:
 			self._cancelNotified = True
 			self._session.cancel()
 			# Translators: The result will not be inserted because focus moved during this session.

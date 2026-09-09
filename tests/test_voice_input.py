@@ -77,10 +77,11 @@ def keyboardChecks(plugin, host):
 		def key(key, pressed):
 			return controller._handleKey(key[0], 0, key[1], pressed)
 
-		def press(combo=keys, execute=True):
+		def press(combo=keys, execute=True, modifiers=()):
 			for item in combo:
 				assert key(item, True)
 			gesture = KeyboardGesture(instance.script_voiceInput, combo)
+			gesture.modifiers.update(modifiers)
 			assert controller._handleGesture(gesture)
 			if execute:
 				instance.script_voiceInput(gesture)
@@ -107,6 +108,19 @@ def keyboardChecks(plugin, host):
 		start.assert_not_called()
 		release()
 		section["loggedIn"] = True
+		for name, value in (
+			("nvdacnUsername", ""),
+			("nvdacnPassword", ""),
+			("nvdacnPassword", "dpapi:invalid"),
+		):
+			previous = section[name]
+			section[name] = value
+			press()
+			assert speech.call_args.args == ("Please log in in the VIVO Voice Input settings first.",)
+			start.assert_not_called()
+			assert controller._session is None
+			release()
+			section[name] = previous
 
 		# Releasing any member stops recording. Repeats remain trapped through the 60-second stop.
 		for releasedKey in keys:
@@ -124,7 +138,7 @@ def keyboardChecks(plugin, host):
 				assert not key(keys[-1], True)
 			session.recordingDone.set()
 			session.done.set()
-			session.text = "recognized text"
+			session.text = "recognized \u4e2d\U0001f600" * 1000
 			controller._poll()
 			assert beep.call_args_list == [((300, 60),), ((800, 60),)]
 			send.assert_not_called()
@@ -163,6 +177,13 @@ def keyboardChecks(plugin, host):
 		# Focus changes cancel permanently, even when focus returns before result delivery.
 		speech.reset_mock()
 		nextHandler = Mock()
+		equivalentFocus = SimpleNamespace(control="editor")
+		assert equivalentFocus == focus and equivalentFocus is not focus
+		host["api"].getFocusObject.return_value = equivalentFocus
+		instance.event_gainFocus(equivalentFocus, nextHandler)
+		controller._poll()
+		assert not session.cancelled.is_set()
+		nextHandler.reset_mock()
 		instance.event_gainFocus(object(), nextHandler)
 		instance.event_gainFocus(focus, nextHandler)
 		assert nextHandler.call_count == 2
@@ -183,6 +204,19 @@ def keyboardChecks(plugin, host):
 		session.done.set()
 		controller._poll()
 		assert speech.call_args.args == ("No text was recognized.",)
+
+		# NVDA adds a NumLock modifier for numpad operators without a physical NumLock press.
+		numpad = [(20, False), (16, False), (107, False)]
+		press(numpad, modifiers={(144, False)})
+		session = controller._session
+		assert session is not None and not session.stop.is_set()
+		release(numpad)
+		assert session.stop.is_set()
+		session.text = "numpad"
+		session.done.set()
+		controller._poll()
+		send.assert_called_once_with("numpad")
+		send.reset_mock()
 
 		press()
 		session = controller._session
@@ -206,6 +240,7 @@ def keyboardChecks(plugin, host):
 			plugin.VIVOVoiceInputSettingsPanel
 			not in host["gui.settingsDialogs"].NVDASettingsDialog.categoryClasses
 		)
+		assert all(isinstance(call.args[0], int) for call in host["winUser"].getAsyncKeyState.call_args_list)
 
 
 def recordingChecks(recording):
@@ -477,6 +512,84 @@ async def protocolChecks(recognition):
 	assert session.error == recognition.NO_TEXT_ERROR
 	sign.assert_not_called()
 
+	# Cancellation and a recording failure arriving during the final drain must take precedence.
+	for recordingError in (None, recognition.RECORDING_ERROR):
+		session = recognition.Session("default", threading.Event())
+		session.stop.set()
+
+		def finishRecording():
+			session.error = recordingError
+			session.cancel()
+
+		with patch.object(session.recordingDone, "wait", side_effect=finishRecording):
+			assert session._skipShortRecording()
+		assert session.error == recordingError
+
+	# Finished audio below one frame is skipped; a full frame remains eligible for recognition.
+	for size in (0, 2, recognition.recording.FRAME_BYTES):
+		session = recognition.Session("default", threading.Event())
+		session._onAudio(bytes(size))
+		session.stop.set()
+		session.recordingDone.set()
+		assert session._skipShortRecording() == (size < recognition.recording.FRAME_BYTES)
+
+	def activeRecording(deviceId, stop, onStarted, onAudio):
+		onStarted()
+		onAudio(bytes(recognition.recording.FRAME_BYTES))
+		assert stop.wait(3)
+
+	networkError = recognition.AuthenticationError("authentication unavailable")
+	networkError.__cause__ = recognition.NetworkError("offline")
+	for failure, expected in (
+		(recognition.AuthenticationError("denied"), recognition.AUTHENTICATION_ERROR),
+		(networkError, recognition.AUTHENTICATION_NETWORK_ERROR),
+		(recognition.ApiError("invalid response"), recognition.AUTHENTICATION_RESPONSE_ERROR),
+	):
+		with (
+			patch.object(recognition.recording, "record", side_effect=activeRecording),
+			patch.object(recognition, "genSignHeaders", side_effect=failure),
+		):
+			session = recognition.Session("default", threading.Event())
+			session.start("test-user", "test-pass", "0.1")
+			await waitDone(session)
+		assert session.error == expected
+
+	for code in (10003, 10004):
+
+		async def serviceError(socket):
+			await socket.recv()
+			await socket.send(json.dumps({"action": "error", "code": code}))
+
+		async with serve(serviceError, "127.0.0.1", 0, compression=None) as local:
+			port = local.sockets[0].getsockname()[1]
+			with (
+				patch.object(recognition, "ENDPOINT", f"ws://127.0.0.1:{port}/asr/v2"),
+				patch.object(recognition.recording, "record", side_effect=activeRecording),
+				patch.object(recognition, "genSignHeaders", return_value={"X-AI-GATEWAY-SIGNATURE": "test"}),
+			):
+				session = recognition.Session("default", threading.Event())
+				session.start("test-user", "test-pass", "0.1")
+				await waitDone(session)
+		assert session.error == recognition.RECOGNITION_ERROR
+
+	# Cancellation after capture starts must still prevent an authentication request.
+	session = recognition.Session("default", threading.Event())
+
+	def cancelAfterStart():
+		assert session.recordingStarted.wait(2)
+		session.cancel()
+		return True
+
+	with (
+		patch.object(recognition.recording, "record", side_effect=activeRecording),
+		patch.object(session, "_waitForRecordingStart", side_effect=cancelAfterStart),
+		patch.object(recognition, "genSignHeaders") as sign,
+	):
+		session.start("test-user", "test-pass", "0.1")
+		await waitDone(session)
+	assert session.error is None
+	sign.assert_not_called()
+
 
 def runChecks(directory):
 	host = {
@@ -498,7 +611,7 @@ def runChecks(directory):
 		"systemUtils": SimpleNamespace(ExecAndPump=Mock()),
 		"ui": SimpleNamespace(delayedMessage=Mock()),
 		"tones": SimpleNamespace(beep=Mock()),
-		"api": SimpleNamespace(getFocusObject=Mock(return_value=object())),
+		"api": SimpleNamespace(getFocusObject=Mock(return_value=SimpleNamespace(control="editor"))),
 		"brailleInput": SimpleNamespace(handler=SimpleNamespace(sendChars=Mock())),
 		"eventHandler": SimpleNamespace(isPendingEvents=Mock(return_value=False)),
 		"inputCore": SimpleNamespace(decide_handleRawKey=Mock(), decide_executeGesture=Mock()),
@@ -506,7 +619,7 @@ def runChecks(directory):
 			KeyboardInputGesture=KeyboardGesture,
 			isNVDAModifierKey=lambda vk, extended: vk in (20, 45),
 		),
-		"winUser": SimpleNamespace(getAsyncKeyState=Mock(return_value=0)),
+		"winUser": SimpleNamespace(VK_NUMLOCK=144, getAsyncKeyState=Mock(return_value=0)),
 	}
 	with patch.dict(sys.modules, host):
 		pluginPath = Path(__file__).resolve().parents[1] / "addon/globalPlugins/VIVOVoiceInput/__init__.py"

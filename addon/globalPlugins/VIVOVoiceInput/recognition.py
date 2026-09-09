@@ -123,13 +123,9 @@ class Session:
 			headers = genSignHeaders(username, password, "GET", "/asr/v2", params)
 			signature = headers.get("X-AI-GATEWAY-SIGNATURE")
 			if not isinstance(signature, str) or not signature.strip():
-				raise ValueError("Invalid authentication signature")
+				raise ApiError("Invalid authentication signature")
 			password = username = None
-			if not self.cancelled.is_set():
-				if self.error:
-					return
-				if self._skipShortRecording():
-					return
+			if not self._skipShortRecording():
 				url = ENDPOINT + "?" + _genCanonicalQueryString(params)
 				self.text = asyncio.run(self._recognize(url, headers))
 		except AuthenticationError as error:
@@ -151,7 +147,7 @@ class Session:
 			log.error("VIVO recognition authentication response failed (%s).", type(error).__name__)
 		except RecognitionServiceError as error:
 			if not self.cancelled.is_set():
-				self.error = NO_TEXT_ERROR if error.code in (10003, 10004) else RECOGNITION_ERROR
+				self.error = RECOGNITION_ERROR
 			log.error("VIVO recognition service failed (code=%s).", error.code)
 		except Exception as error:
 			log.error("VIVO recognition failed (%s).", type(error).__name__)
@@ -172,9 +168,13 @@ class Session:
 		return True
 
 	def _skipShortRecording(self):
-		if self.cancelled.is_set() or not self.stop.is_set():
+		if self.cancelled.is_set() or self.error:
+			return True
+		if not self.stop.is_set():
 			return False
 		self.recordingDone.wait()
+		if self.cancelled.is_set() or self.error:
+			return True
 		if self._audioBytes < recording.FRAME_BYTES:
 			self.error = NO_TEXT_ERROR
 			return True
