@@ -6,7 +6,7 @@ VIVO Voice Input. The default shortcut is **NVDA+Shift+V**: hold to speak and re
 
 You need a working microphone and a reliable internet connection. You also need a valid NVDACN account. [Click here to visit NVDACN](https://www.nvdacn.com/).
 
-Add-on version: 0.2. NVDA versions: 2026.1 to 2026.3.
+Add-on version: 0.2. Minimum NVDA version: 2026.1. Last tested NVDA version: 2026.1.
 
 ## Installation and login
 
